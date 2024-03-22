@@ -1,0 +1,45 @@
+[project]
+name = "signal-desktop-gif"
+version = "0.1.0"
+description = "Add your description here"
+authors = [
+	{ name = "Mikuláš Zelinka", email = "mikulas@zelinka.dev" },
+]
+dependencies = [
+	"httpx>=0.27.0",       # nice http requests
+	"loguru>=0.7.2",       # logging 
+	"platformdirs>=4.2.0", # cross-platform app cache/config directories
+	"pyautogui>=0.9.54",   # sending hotkeys / keypresses
+	"pynput>=1.7.6",       # listening for global hotkeys
+	"pyperclip>=1.8.2",    # clipboard
+]
+readme = "README.md"
+requires-python = ">= 3.8"
+
+[project.scripts]
+"signal-desktop-gif" = "signal_desktop_gif:main"
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.format]
+indent-style = "tab"
+
+[tool.rye]
+managed = true
+dev-dependencies = [
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = [
+	"src/signal_desktop_gif",
+]
+
+[build-system]
+requires = [
+	"hatchling",
+]
+build-backend = "hatchling.build"
