@@ -1,7 +1,7 @@
 [project]
 name = "signal-desktop-gif"
 version = "0.1.0"
-description = "Add your description here"
+description = "Paste GIFs into Signal Desktop with a single global keyboard shortcut."
 authors = [
 	{ name = "Mikuláš Zelinka", email = "mikulas@zelinka.dev" },
 ]
