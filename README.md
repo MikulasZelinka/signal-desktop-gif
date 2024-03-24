@@ -35,7 +35,7 @@ signal-desktop-gif
 ## Configuration
 
 TODO.
-For now, you have edit the source code and change the various `GLOBAL_CONFIG_VARIABLES` (including shortcuts) in the [script](./src/signal_desktop_gif/__init__.py).
+For now, you have to edit the source code and change the various `GLOBAL_CONFIG_VARIABLES` (including shortcuts) in the [script](./src/signal_desktop_gif/__init__.py).
 
 ## Known Issues
 
