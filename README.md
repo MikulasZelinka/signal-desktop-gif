@@ -18,7 +18,8 @@ Tested on Windows and MacOS. Needs testing on Linux.
 
 ## Configuration
 
-TODO. For now, you have to change the `GLOBAL_CONFIG_VARIABLES` in the [script](./src/signal_desktop_gif/__init__.py).
+TODO.
+For now, you have to change the various `GLOBAL_CONFIG_VARIABLES` (including shortcuts) in the [script](./src/signal_desktop_gif/__init__.py).
 
 ## Known Issues
 
@@ -27,4 +28,4 @@ TODO. For now, you have to change the `GLOBAL_CONFIG_VARIABLES` in the [script](
 ## Links
 
 - <https://github.com/signalapp/Signal-Desktop/issues/4841>
-- Thanks to [this Reddit post](https://www.reddit.com/r/signal/comments/180hm37/desktop_and_gifs/) for pointing out that HTTP URLs can be pasted directly into Signal Desktop.
+- Thanks to [this Reddit post](https://www.reddit.com/r/signal/comments/180hm37/desktop_and_gifs/) for pointing out that HTTP URLs can be pasted directly into Signal Desktop (well, at least on Windows and Linux, MacOS doesn't support this).

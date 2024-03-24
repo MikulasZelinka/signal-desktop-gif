@@ -35,10 +35,12 @@ ALLOWED_EXTENSIONS = {
 }
 AUTOMATICALLY_OPEN_SIGNAL = True
 AUTOMATICALLY_SEND_MESSAGE = False
-HOTKEY = "<ctrl>+g"
+HOTKEY_PASTE = "<ctrl>+g"
+HOTKEY_QUIT = "<ctrl>+<shift>+e"
 
 # this is not necessary after discovering that plain URLs work as well, but I've kept option this because it stores/caches the gifs for you
 # https://www.reddit.com/r/signal/comments/180hm37/desktop_and_gifs/
+# MacOS will always behave as if this was True, because it doesn't support pasting the URL directly
 DOWNLOAD_FILE_BEFORE_PASTING = False
 
 
@@ -55,10 +57,19 @@ class Platform(StrEnum):
 
 
 PLATFORM = Platform(platform.system())
+logger.info(f"Running on {PLATFORM=}")
+
 if PLATFORM == Platform.Linux:
 	logger.warning(
-		"Linux is not supported yet. It might not work because the file picker is probably different (will use the Windows behaviour that simply pastes the URL after opening the file picker)."
+		"Linux is not supported yet."
+		" It might not work because the file picker is probably different."
+		" Will use the Windows behaviour that simply pastes the URL after opening the file picker."
 	)
+if PLATFORM == Platform.MacOS and DOWNLOAD_FILE_BEFORE_PASTING is False:
+	logger.warning(
+		"MacOS does not support pasting the URL directly, so the gif will be downloaded and pasted as a file."
+	)
+	DOWNLOAD_FILE_BEFORE_PASTING = True
 
 
 # https://support.signal.org/hc/en-us/articles/360036517511-Signal-Desktop-Keyboard-Shortcuts
@@ -80,9 +91,6 @@ PLATFORM_SHORTCUTS = {
 		Platform.Linux: None,  # @TODO: allow configuring this for Linux
 	},
 }
-
-
-logger.info(f"Running on {PLATFORM=}")
 
 
 def fmt_bytes_to_mb(num_bytes: int):
@@ -174,7 +182,7 @@ def paste_gif_to_signal(gif_path: httpx.URL | Path):
 	pyautogui.hotkey(*PLATFORM_SHORTCUTS["Focus composer"][PLATFORM], interval=SECONDS_TO_HOLD_MULTIPLE_KEYS)
 
 	logger.info("Opening the file attachment dialog.")
-	# a non-zero interval is needed to prevent the hotkey from being ignored (on MacOS)
+	# a non-zero interval is needed to prevent the hotkey from being ignored (at least on MacOS)
 	pyautogui.hotkey(*PLATFORM_SHORTCUTS["Attach file"][PLATFORM], interval=SECONDS_TO_HOLD_MULTIPLE_KEYS)
 
 	if PLATFORM == Platform.MacOS:
@@ -190,19 +198,20 @@ def paste_gif_to_signal(gif_path: httpx.URL | Path):
 		gif_path = gif_path.resolve()
 
 	path_to_type = str(gif_path)
-	if PLATFORM == Platform.MacOS:
-		# the first slash is already there in the address bar: "/"
-		path_to_type = path_to_type[1:]
+	# for some reason, pasting doesn't work on MacOS:
+	# pyperclip.copy(path_to_type)
+	# pyperclip.paste()
+	# whereas typing works everywhere:
 	KEYBOARD_CONTROLLER.type(path_to_type)
 	time.sleep(SECONDS_TO_SLEEP_AFTER_ACTION)
 
-	# # then, the first Enter enters the parent folder
+	# MacOS needes two Enters, one for parent folder, one for file
 	if PLATFORM == Platform.MacOS:
 		logger.info("Pressing enter to enter the gif path.")
 		pyautogui.press("enter")
 		time.sleep(SECONDS_TO_SLEEP_AFTER_ACTION)
 
-	# and the second Enter selects the gif file
+	# This selects the file and inserts it into the Signal message (on all platforms)
 	logger.info("Pressing enter to insert the gif file.")
 	pyautogui.press("enter")
 
@@ -220,6 +229,7 @@ def download_and_paste():
 		logger.error("Failed to get the gif URL, cannot paste this clipboard.")
 		return
 
+	# MacOS doesn't support pasting the URL directly
 	if DOWNLOAD_FILE_BEFORE_PASTING:
 		gif_path = download_gif(gif_url)
 		if gif_path is None:
@@ -248,11 +258,11 @@ def main():
 
 	with keyboard.GlobalHotKeys(
 		{
-			HOTKEY: download_and_paste,
-			"<ctrl>+<shift>+e": exit_on_interrupt,  # Ctrl+C does not work on Windows
+			HOTKEY_PASTE: download_and_paste,
+			HOTKEY_QUIT: exit_on_interrupt,  # Ctrl+C does not work on Windows
 		}
 	) as h:
-		logger.success(f"Press {HOTKEY} to download and paste a gif when its URL is in the clipboard.")
+		logger.success(f"Press {HOTKEY_PASTE} to download and paste a gif when its URL is in the clipboard.")
 		try:
 			h.join()
 		except KeyboardInterrupt:
