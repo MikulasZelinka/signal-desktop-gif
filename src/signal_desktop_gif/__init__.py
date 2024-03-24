@@ -205,7 +205,7 @@ def paste_gif_to_signal(gif_path: httpx.URL | Path):
 	KEYBOARD_CONTROLLER.type(path_to_type)
 	time.sleep(SECONDS_TO_SLEEP_AFTER_ACTION)
 
-	# MacOS needes two Enters, one for parent folder, one for file
+	# MacOS needs two Enters, one for parent folder, one for file
 	if PLATFORM == Platform.MacOS:
 		logger.info("Pressing enter to enter the gif path.")
 		pyautogui.press("enter")
