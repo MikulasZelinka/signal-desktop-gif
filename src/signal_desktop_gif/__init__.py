@@ -33,11 +33,13 @@ from pynput import keyboard
 
 ALLOWED_EXTENSIONS = {
 	".gif",
+	".mp4",
 	".webp",
 }
 AUTOMATICALLY_OPEN_SIGNAL = True
-AUTOMATICALLY_SEND_MESSAGE = True
+AUTOMATICALLY_SEND_MESSAGE = False
 HOTKEY = "<ctrl>+g"
+DOWNLOAD_FILE_BEFORE_PASTING = False  # this is not necessary after discovering that plain URLs work as well, but I've kept option this because it stores/caches the gifs for you
 SECONDS_TO_HOLD_MULTIPLE_KEYS = 0.1
 SECONDS_TO_SLEEP_AFTER_ACTION = 1.0
 
@@ -151,7 +153,7 @@ def download_gif(gif_url: httpx.URL) -> Path | None:
 	return gif_file_path
 
 
-def paste_gif_to_signal(gif_path: Path):
+def paste_gif_to_signal(gif_path: httpx.URL | Path):
 	if AUTOMATICALLY_OPEN_SIGNAL:
 		if PLATFORM != Platform.MacOS:
 			logger.warning(
@@ -177,7 +179,12 @@ def paste_gif_to_signal(gif_path: Path):
 		time.sleep(SECONDS_TO_SLEEP_AFTER_ACTION)
 
 	logger.info("Typing the gif path.")
-	path_to_type = str(gif_path.resolve())
+
+	if isinstance(gif_path, Path):
+		# a URL doesn't need to be resolved
+		gif_path = gif_path.resolve()
+
+	path_to_type = str(gif_path)
 	if PLATFORM == Platform.MacOS:
 		# the first slash is already there in the address bar: "/"
 		path_to_type = path_to_type[1:]
@@ -203,13 +210,16 @@ def paste_gif_to_signal(gif_path: Path):
 def download_and_paste():
 	logger.info("Downloading and pasting the gif.")
 	gif_url = get_url_from_clipboard()
-	gif_path = download_gif(gif_url)
 
-	if gif_path is None:
-		logger.error("Failed to download the gif, quitting.")
-		return
+	if DOWNLOAD_FILE_BEFORE_PASTING:
+		gif_path = download_gif(gif_url)
+		if gif_path is None:
+			logger.error("Failed to download the gif, quitting.")
+			return
+		paste_gif_to_signal(gif_path)
+	else:
+		paste_gif_to_signal(gif_url)
 
-	paste_gif_to_signal(gif_path)
 	logger.success("Gif pasted successfully. Well, maybe. There's no way to check (:")
 
 
