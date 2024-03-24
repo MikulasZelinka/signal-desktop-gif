@@ -13,10 +13,14 @@ If AUTOMATICALLY_SEND_MESSAGE is set to True, the message will be _sent_ automat
 Signal is even automatically opened/switched to, iff AUTOMATICALLY_OPEN_SIGNAL is set to True.
     However, this currently only works on MacOS. Disable AUTOMATICALLY_OPEN_SIGNAL if you are not using MacOS.
     You have to have Signal focused for the script to work if AUTOMATICALLY_OPEN_SIGNAL is set to False.
+
+Currently, only Windows and MacOS are supported.
 """
 
 import os
+import platform
 import time
+from enum import StrEnum
 from functools import cache
 from pathlib import Path
 
@@ -40,6 +44,44 @@ SECONDS_TO_SLEEP_AFTER_ACTION = 1.0
 KEYBOARD_CONTROLLER = keyboard.Controller()
 
 
+# a StrEnum for Platform
+class Platform(StrEnum):
+	Windows = "Windows"
+	MacOS = "Darwin"
+	Linux = "Linux"
+
+
+PLATFORM = Platform(platform.system())
+if PLATFORM == Platform.Linux:
+	logger.warning(
+		"Linux is not supported yet. It likely won't work because the file picker is probably different (attempting to use Windows behaviour)."
+	)
+
+
+# https://support.signal.org/hc/en-us/articles/360036517511-Signal-Desktop-Keyboard-Shortcuts
+PLATFORM_SHORTCUTS = {
+	"Focus composer": {
+		Platform.MacOS: ("command", "shift", "t"),
+		Platform.Windows: ("ctrl", "shift", "t"),
+		Platform.Linux: ("ctrl", "shift", "t"),
+	},
+	"Attach file": {
+		Platform.MacOS: ("command", "u"),
+		Platform.Windows: ("ctrl", "u"),
+		Platform.Linux: ("ctrl", "u"),
+	},
+	"Focus address bar": {
+		# this is not a Signal shortcut but an OS specific one
+		Platform.MacOS: ("/"),
+		Platform.Windows: None,  # file path is already selected on Windows
+		Platform.Linux: None,  # @TODO: allow configuring this for Linux
+	},
+}
+
+
+logger.info(f"Running on {PLATFORM=}")
+
+
 def fmt_bytes_to_mb(num_bytes: int):
 	return f"{num_bytes / 1024 / 1024:.2f} MB"
 
@@ -56,7 +98,7 @@ def get_base_dir() -> Path:
 
 def url_to_path_name(url: httpx.URL) -> str:
 	# @TODO: consider using more than a path, if it's ever needed
-	return url.path.lstrip("/").replace("/", "_").replace("\\", "_")
+	return url.host + "_" + url.path.lstrip("/").replace("/", "_").replace("\\", "_")
 
 
 def get_url_from_clipboard() -> httpx.URL | None:
@@ -111,32 +153,42 @@ def download_gif(gif_url: httpx.URL) -> Path | None:
 
 def paste_gif_to_signal(gif_path: Path):
 	if AUTOMATICALLY_OPEN_SIGNAL:
-		logger.info("Opening the Signal app.")
-		os.system("open /Applications/Signal.app")
-		time.sleep(SECONDS_TO_SLEEP_AFTER_ACTION)
+		if PLATFORM != Platform.MacOS:
+			logger.warning(
+				"AUTOMATICALLY_OPEN_SIGNAL is set to True but the current platform does not support it. Signal must already be focused when pressing the hotkey."
+			)
+		else:
+			logger.info("Opening the Signal app.")
+			os.system("open /Applications/Signal.app")
+			time.sleep(SECONDS_TO_SLEEP_AFTER_ACTION)
 
 	logger.info("Selecting message input textbox.")
 	# https://github.com/signalapp/Signal-Desktop/issues/2706#issuecomment-854147859
-	pyautogui.hotkey("command", "shift", "t", interval=SECONDS_TO_HOLD_MULTIPLE_KEYS)
+	pyautogui.hotkey(*PLATFORM_SHORTCUTS["Focus composer"][PLATFORM], interval=SECONDS_TO_HOLD_MULTIPLE_KEYS)
 
 	logger.info("Opening the file attachment dialog.")
 	# a non-zero interval is needed to prevent the hotkey from being ignored (on MacOS)
-	pyautogui.hotkey("command", "u", interval=SECONDS_TO_HOLD_MULTIPLE_KEYS)
+	pyautogui.hotkey(*PLATFORM_SHORTCUTS["Attach file"][PLATFORM], interval=SECONDS_TO_HOLD_MULTIPLE_KEYS)
 
-	logger.info("Opening the path dialog.")
-	# pyautogui.hotkey("command", "shift", "g", interval=SECONDS_TO_HOLD_MULTIPLE_KEYS)
-	# this search works better on MacOS
-	pyautogui.hotkey("/")
-	time.sleep(SECONDS_TO_SLEEP_AFTER_ACTION)
+	if PLATFORM == Platform.MacOS:
+		# Windows already has the file path selected, so we don't need to focus the address bar
+		logger.info("Focusing address bar.")
+		pyautogui.hotkey(*PLATFORM_SHORTCUTS["Focus address bar"][PLATFORM], interval=SECONDS_TO_HOLD_MULTIPLE_KEYS)
+		time.sleep(SECONDS_TO_SLEEP_AFTER_ACTION)
 
 	logger.info("Typing the gif path.")
-	KEYBOARD_CONTROLLER.type(str(gif_path.resolve())[1:])  # the first slash is already there
+	path_to_type = str(gif_path.resolve())
+	if PLATFORM == Platform.MacOS:
+		# the first slash is already there in the address bar: "/"
+		path_to_type = path_to_type[1:]
+	KEYBOARD_CONTROLLER.type(path_to_type)
 	time.sleep(SECONDS_TO_SLEEP_AFTER_ACTION)
 
-	# then, the first Enter enters the parent folder
-	logger.info("Pressing enter to enter the gif path.")
-	pyautogui.press("enter")
-	time.sleep(SECONDS_TO_SLEEP_AFTER_ACTION)
+	# # then, the first Enter enters the parent folder
+	if PLATFORM == Platform.MacOS:
+		logger.info("Pressing enter to enter the gif path.")
+		pyautogui.press("enter")
+		time.sleep(SECONDS_TO_SLEEP_AFTER_ACTION)
 
 	# and the second Enter selects the gif file
 	logger.info("Pressing enter to insert the gif file.")
@@ -149,6 +201,7 @@ def paste_gif_to_signal(gif_path: Path):
 
 
 def download_and_paste():
+	logger.info("Downloading and pasting the gif.")
 	gif_url = get_url_from_clipboard()
 	gif_path = download_gif(gif_url)
 
@@ -160,6 +213,11 @@ def download_and_paste():
 	logger.success("Gif pasted successfully. Well, maybe. There's no way to check (:")
 
 
+def exit_on_interrupt():
+	logger.info("Exiting...")
+	exit(0)
+
+
 def main():
 	# to just run once:
 	# download_and_paste()
@@ -167,12 +225,19 @@ def main():
 	# Show cache stats on startup
 	get_base_dir()
 
-	with keyboard.GlobalHotKeys({HOTKEY: download_and_paste}) as h:
+	with keyboard.GlobalHotKeys(
+		{
+			HOTKEY: download_and_paste,
+			"<ctrl>+<shift>+e": exit_on_interrupt,  # Ctrl+C does not work on Windows
+		}
+	) as h:
 		logger.success(f"Press {HOTKEY} to download and paste a gif when its URL is in the clipboard.")
 		try:
 			h.join()
 		except KeyboardInterrupt:
-			logger.success("kthxbyeee!")
+			# this is (correctly) triggered by Ctrl+C on MacOS but not on Windows
+			logger.info("KeyboardInterrupt received.")
+			exit_on_interrupt()
 
 
 if __name__ == "__main__":
