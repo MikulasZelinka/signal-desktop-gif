@@ -109,14 +109,18 @@ def get_url_from_clipboard() -> httpx.URL | None:
 	logger.info(f"Clipboard content: '{clipboard}'")
 	try:
 		gif_url = httpx.URL(clipboard)
+		if gif_url.scheme not in {"http", "https"}:
+			raise httpx.InvalidURL(f"Invalid scheme: {gif_url.scheme=}")
 		return gif_url
-	except httpx.InvalidURL:
-		logger.error(f"The clipboard does not contain a valid URL: {clipboard}")
+	except httpx.InvalidURL as e:
+		logger.error(f"The {clipboard=} does not contain a valid URL: {e}")
 		return None
 
 
 def download_gif(gif_url: httpx.URL) -> Path | None:
 	"""Downloads the (gif) url to a temp folder and returns the path to the (gif) file."""
+
+	logger.info(f"> Downloading {gif_url=} to a file (or simply loading it if it already exists in the cache).")
 
 	# Check if the (gif) file already exists
 	gif_file_name = url_to_path_name(gif_url)
@@ -212,6 +216,10 @@ def download_and_paste():
 	logger.info("Downloading and pasting the gif.")
 	gif_url = get_url_from_clipboard()
 
+	if gif_url is None:
+		logger.error("Failed to get the gif URL, cannot paste this clipboard.")
+		return
+
 	if DOWNLOAD_FILE_BEFORE_PASTING:
 		gif_path = download_gif(gif_url)
 		if gif_path is None:
@@ -219,6 +227,7 @@ def download_and_paste():
 			return
 		paste_gif_to_signal(gif_path)
 	else:
+		logger.info("> Pasting the URL directly from clipboard.")
 		paste_gif_to_signal(gif_url)
 
 	logger.success("Gif pasted successfully. Well, maybe. There's no way to check (:")
