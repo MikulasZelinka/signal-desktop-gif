@@ -11,10 +11,7 @@ If AUTOMATICALLY_SEND_MESSAGE is set to True, the message will be _sent_ automat
     Otherwise, you will need to press Enter to send the message.
 
 Signal is even automatically opened/switched to, iff AUTOMATICALLY_OPEN_SIGNAL is set to True.
-    However, this currently only works on MacOS. Disable AUTOMATICALLY_OPEN_SIGNAL if you are not using MacOS.
-    You have to have Signal focused for the script to work if AUTOMATICALLY_OPEN_SIGNAL is set to False.
-
-Currently, only Windows and MacOS are supported.
+    However, this currently only works on MacOS. You have to have Signal focused for the script to work if you're on other platforms
 """
 
 import os
@@ -39,14 +36,18 @@ ALLOWED_EXTENSIONS = {
 AUTOMATICALLY_OPEN_SIGNAL = True
 AUTOMATICALLY_SEND_MESSAGE = False
 HOTKEY = "<ctrl>+g"
-DOWNLOAD_FILE_BEFORE_PASTING = False  # this is not necessary after discovering that plain URLs work as well, but I've kept option this because it stores/caches the gifs for you
+
+# this is not necessary after discovering that plain URLs work as well, but I've kept option this because it stores/caches the gifs for you
+# https://www.reddit.com/r/signal/comments/180hm37/desktop_and_gifs/
+DOWNLOAD_FILE_BEFORE_PASTING = False
+
+
 SECONDS_TO_HOLD_MULTIPLE_KEYS = 0.1
 SECONDS_TO_SLEEP_AFTER_ACTION = 1.0
 
 KEYBOARD_CONTROLLER = keyboard.Controller()
 
 
-# a StrEnum for Platform
 class Platform(StrEnum):
 	Windows = "Windows"
 	MacOS = "Darwin"
@@ -56,7 +57,7 @@ class Platform(StrEnum):
 PLATFORM = Platform(platform.system())
 if PLATFORM == Platform.Linux:
 	logger.warning(
-		"Linux is not supported yet. It likely won't work because the file picker is probably different (attempting to use Windows behaviour)."
+		"Linux is not supported yet. It might not work because the file picker is probably different (will use the Windows behaviour that simply pastes the URL after opening the file picker)."
 	)
 
 
@@ -233,7 +234,8 @@ def main():
 	# download_and_paste()
 
 	# Show cache stats on startup
-	get_base_dir()
+	if DOWNLOAD_FILE_BEFORE_PASTING:
+		get_base_dir()
 
 	with keyboard.GlobalHotKeys(
 		{

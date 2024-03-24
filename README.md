@@ -2,6 +2,8 @@
 
 Paste GIFs into Signal Desktop with a single global keyboard shortcut.
 
+Tested on Windows and MacOS. Needs testing on Linux.
+
 ## Usage
 
 1. Copy a GIF url to your clipboard.
@@ -18,7 +20,11 @@ Paste GIFs into Signal Desktop with a single global keyboard shortcut.
 
 TODO. For now, you have to change the `GLOBAL_CONFIG_VARIABLES` in the [script](./src/signal_desktop_gif/__init__.py).
 
+## Known Issues
+
+- Quitting on Windows is buggy, you can use `Ctrl + Shift + e` to exit the script if `Ctrl + c` doesn't work.
+
 ## Links
 
 - <https://github.com/signalapp/Signal-Desktop/issues/4841>
-- Thanks to [this Reddit post](https://www.reddit.com/r/signal/comments/180hm37/desktop_and_gifs/) for pointing out that HTTP URLs can be pasted into Signal Desktop.
+- Thanks to [this Reddit post](https://www.reddit.com/r/signal/comments/180hm37/desktop_and_gifs/) for pointing out that HTTP URLs can be pasted directly into Signal Desktop.
